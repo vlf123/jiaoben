@@ -1,0 +1,56 @@
+参考教程https://blog.csdn.net/u012791712/article/details/103972175
+https://www.cnblogs.com/sxshaolong/p/10196363.html
+
+扩展参考
+https://www.cnblogs.com/lyq863987322/p/8511786.html  
+
+服务器添加snmp服务，用于测试
+yum install net-snmp* -y
+
+交换机添加snmp
+snmp-agent community read cipher test   #指定团体名
+snmp-agent target-host trap address udp-domain 10.8.8.177 udp-port 166 params securityname cipher Qwert..!23         #指定发送到接收机器的ip+端口 并设置密码
+
+snmpwalk -v 2c -c test 10.8.8.18 system
+
+-V：snmp的版本号    一般交换机默认是2c
+
+-C：指定刚刚设置的团体名
+
+Ip：后面的ip就是交换的ip
+System：查看交换机型号，信息
+
+
+一般成功了，在输入命令后会出现下面的信息
+[root@localhost ~]# snmpwalk -v 2c -c test 10.8.8.18 system
+SNMPv2-MIB::sysDescr.0 = STRING: S6720-54C-EI-48S-AC   <--这个就是交换机型号
+Huawei Versatile Routing Platform Software 
+ VRP (R) software,Version 5.170 (S6720 V200R010C00SPC600) 
+ Copyright (C) 2007 Huawei Technologies Co., Ltd.
+SNMPv2-MIB::sysObjectID.0 = OID: SNMPv2-SMI::enterprises.2011.2.23.343
+DISMAN-EVENT-MIB::sysUpTimeInstance = Timeticks: (3384074039) 391 days, 16:12:20.39
+SNMPv2-MIB::sysContact.0 = STRING: R&D Beijing, Huawei Technologies co.,Ltd.
+SNMPv2-MIB::sysName.0 = STRING: CNHK-EQU15F-2007-Old_Core_S6720_6346/6354
+SNMPv2-MIB::sysLocation.0 = STRING: SW08018
+SNMPv2-MIB::sysServices.0 = INTEGER: 78
+
+再到交换机上输入
+dis version
+查询交换机的型号，只要与之匹配就是成功了
+如果只有一台交换机的话，只要snmpwalk命令成功也是可以了
+
+另外，在容器zabbix-server-mysql 要加多条-p 161:161
+161是你接收snmp的端口
+
+zabbix
+配置->主机->创建主机
+
+主机名称，群组这些随便填
+agent代理那里，去掉
+在snmp接口点添加，然后输入交换机ip及端口，默认161
+点模版->Link new templates  在这里搜索hua 然后选择
+再点宏那里->{$SNMP_COMMUNITY} = test    #test是你在交换机创建的团名
+
+过一会就可以了
+
+
