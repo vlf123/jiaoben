@@ -1,0 +1,65 @@
+#!/bin/bash
+###更新centos 並安裝docker
+yum update -y
+yum -y install yum-utils device-mapper-persistent-data lvm2
+yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+yum -y install docker-ce.x86_64
+yum -y install epel-release
+yum -y install net-snmp*
+
+###啓動docker
+systemctl daemon-reload
+systemctl start docker
+systemctl status docker
+systemctl enable docker
+docker  info
+docker version
+
+
+###安裝並啓動容器
+docker run --name mysql-server -t \
+       --restart always \
+       -e MYSQL_DATABASE="zabbix" \
+       -e MYSQL_USER="zabbix" \
+       -e MYSQL_PASSWORD="zabbix_pwd" \
+       -e MYSQL_ROOT_PASSWORD="root_pwd" \
+       -d mysql:5.7 \
+       --character-set-server=utf8 --collation-server=utf8_bin
+
+docker run --name zabbix-java-gateway -t \
+       --restart always \
+       -d zabbix/zabbix-java-gateway:latest
+
+
+docker run --name zabbix-server-mysql -t \
+       --restart always \
+       -e DB_SERVER_HOST="mysql-server" \
+       -e MYSQL_DATABASE="zabbix" \
+       -e MYSQL_USER="zabbix" \
+       -e MYSQL_PASSWORD="zabbix_pwd" \
+       -e MYSQL_ROOT_PASSWORD="root_pwd" \
+       -e ZBX_JAVAGATEWAY="zabbix-java-gateway" \
+       --link mysql-server:mysql \
+       --link zabbix-java-gateway:zabbix-java-gateway \
+       -p 10051:10051 \
+       -p 161:161 \
+       -d zabbix/zabbix-server-mysql:latest
+
+
+docker run --name zabbix-web-nginx-mysql -t \
+       --restart always\
+       -e DB_SERVER_HOST="mysql-server" \
+       -e MYSQL_DATABASE="zabbix" \
+       -e MYSQL_USER="zabbix" \
+       -e MYSQL_PASSWORD="zabbix_pwd" \
+       -e MYSQL_ROOT_PASSWORD="root_pwd" \
+       --link mysql-server:mysql \
+       --link zabbix-server-mysql:zabbix-server \
+       -p 80:80 \
+       -d zabbix/zabbix-web-nginx-mysql:latest
+
+
+###安裝docker可視化
+docker pull abh1nav/dockerui
+docker run -d --privileged --name dockerui -p 9000:9000 -v /var/run/docker.sock:/var/run/docker.sock abh1nav/dockerui
+
