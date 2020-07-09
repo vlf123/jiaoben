@@ -1,0 +1,149 @@
+shell部分
+#!/bin/sh
+a=`date +%s`                             ###获取当前的系统时间戳
+let "b=$a - 300"                         ###获取5分钟前的时间戳
+cp /root/k.py /root/k1.py             ###把模板文件复制一份 
+sed -i "s/@1@a@/$a/" k1.py        ###替换新复制的文件里的内容
+sed -i "s/@2@b@/$b/" k1.py
+python3 /root/k1.py                    ###运行新文件
+rm -rf k1.py                               ###删除新文件
+
+
+
+
+
+
+
+
+
+
+
+python部分 
+复制以下代码，并在路径/root下新建一个k.py的文件，并粘贴进去
+#!/user/bin/python3
+# -*- coding:utf-8 -*-
+
+import json
+import requests
+import re
+import time
+import datetime
+import logging
+import logstash
+import sys
+
+####获取最近5分钟的操作信息
+url = 'http://127.0.0.1:8080/api_jsonrpc.php'
+post_headers = {'Content-Type': 'application/json'}
+post_data = {
+    "jsonrpc" : "2.0",
+    "method" : "auditlog.get",                                                    ###定义获取操作信息
+    "params" : {
+        "output" : ["auditid","clock","userid","ip","action","note"],             ###定义显示的字段
+        "time_from" : "@1@a@",                                                    ###定义获取数据的开始时间
+        "time_till" : "@2@b@"                                                     ###定义获取数据的结束时间
+    },
+    "id" : 1,
+    "auth":"0360a126b439e8a9b0a3cc0c9a196897"                                                                   ####使用加密令牌登陆zabbix
+}
+ret = requests.post(url, data = json.dumps(post_data), headers = post_headers)        ###开始获取
+a = ret.text     ###把获取的结果以text格式写入变量a
+
+
+###获取用户信息，用于后期修改
+url = 'http://127.0.0.1:8080/api_jsonrpc.php'
+post_headers = {'Content-Type': 'application/json'}
+post_data = {
+    "jsonrpc" : "2.0",
+    "method" : "user.get",                                                         ###定义获取用户信息
+    "params" : {
+        "output" : ["alias"]                                                                                                    ###默认会带上userid并以该字段作为排序，alias是用户名字段
+    },
+    "id" : 1,
+    "auth":"0360a126b439e8a9b0a3cc0c9a196897"
+}
+user = requests.post(url, data = json.dumps(post_data), headers = post_headers)
+aa = user.text                        ###把获取的结果以text格式写入变量aa
+
+####统计在变量a里，clock的出现次数
+def countX(lst, x):        ###启用def函数，并引入变量lst和x
+    return lst.count(x)       ###统计变量x里的元素个数
+lst = a                    ###定义变量lst/把变量a的结果写入变量lst
+x = 'clock'                ###定义变量x
+i = int(countX(lst, x))        ###把统计结果以int格式写入变量i
+
+###开始循环
+for q in range(0,i):                           ###使用for循环，并定义从0开始，最大值为变量i
+    pattern = re.compile(r'clock":"(.+?)"')                                      ###使用re模块提取数据，括号里定义提取格式，写入变量pattern
+    b = pattern.findall(a)                                      ###使用pattern变量来提取变量a里的数据，并写入变量b
+    c = b[q]                                                    ###把变量b里的第一元素写入变量c
+    d = int(c)                                                  ###把变量c作为int格式写入变量d
+    timestamp = d                                               ###把变量d写入timestamp
+    time_local = time.localtime(timestamp)                      ###使用time模块重新读取timestamp变量里的数值,并写入time_local
+    bt = time.strftime("%Y-%m-%d %H:%M:%S",time_local)          ###重新定义time_local里的时间显示模式，并写入变量bt
+    a = re.sub(c,bt,a)                                          ###使用re模块把变量a里与变量c相同的字符替换为变量bt
+
+###统计变量a里，userid的出现次数，并提取对应的数值
+###这里为清洗1
+patt = re.compile(r'userid":"(.+?)"')                           ###使用re模块提取数据，括号里定义提取格式，写入变量patt
+e = patt.findall(a)                                             ###使用patt变量来提取变量a里的数据，并写入变量e 
+f = list(set(e))                                                ###去除变量e里重复的元素，并写入变量f 具体解释请看解释1
+g = len(f)                                                      ###统计变量f里的元素个数，并写入变量g
+g1 = int(g)                                                     ###变量g以int格式写入变量g1
+
+for p in range(0,g1):
+    pattern2 = re.compile(r'alias":"(.+?)"')                    ###使用re模块提取数据，括号里定义提取格式，写入变量pattern2
+    l = pattern2.findall(aa)                                    ###使用pattern变量来提取变量aa里的数据，并写入变量L
+    n = l[p]                                                    ###忘记有什么用了
+    m = 'userid":"'+f[p]                                        ###定义变量m为userid+变量f里的第p个元素
+    o = 'userid:'+l[p]                                          ###定义变量o为userid+变量L里的第p个元素
+    a = re.sub(m,o,a)                                           ###替换变量a里与变量m相同的元素为变量o，并重新写入变量a
+
+###清洗1改，与清洗1差不多，就是从新定义了获取的位置，与清洗1一起选用即可
+patt = re.compile(r'userid":"(.+?)"')                           ###使用re模块提取数据，括号里定义提取格式，写入变量patt
+e = patt.findall(a)                                             ###使用patt变量来提取变量a里的数据，并写入变量e
+f = list(set(e))                                                ###去除变量e里重复的元素，并写入变量f 具体解释请看解释1
+g = len(f)                                                      ###统计变量f里的元素个数，并写入变量g
+g1 = int(g)                                                     ###变量g以int格式写入变量g1
+
+for p in range(0,g1):
+    pattern2 = re.compile(r'alias":"(.+?)"')                    ###使用re模块提取数据，括号里定义提取格式，写入变量pattern2
+    l = pattern2.findall(aa)                                    ###使用pattern变量来提取变量aa里的数据，并写入变量L
+    n = int(l[p])                                               ###忘记有什么用了
+    m = 'userid":"'+f[p]                                        ###定义变量m为userid+变量f里的第p个元素
+    o = 'userid:'+l[n]                                          ###定义变量o为userid+变量L里的第n个元素
+    a = re.sub(m,o,a)                                           ###替换变量a里与变量m相同的元素为变量o，并重新写入变量a
+
+
+
+z = ['action:Add','action:Update','action:Delete','action:Login','action:Logout','action:Enable','action:Disable']
+###变量z，为清洗2准备的，具体解释请看解释1
+###这里为清洗2
+patt = re.compile(r'action":"(.+?)"')
+r = patt.findall(a)
+s = list(set(r))
+t = len(s)
+t1 = int(t)
+
+for o in range(0,t1):
+    z1 = s[o]                                                    ###定义变量z1为变量变量s里第o位的元素
+    z2 = int(z1)                                                 ###把变量z1以int格式写入z2
+    u = 'action":"'+s[o]                                         ###定义筛选格式
+    v = z[z2]                                                    ###可以在替换那里可以直接写z[z2]，此处为个人习惯
+    a = re.sub(u,v,a)                                            ###替换，并从新写入变量a
+
+###清洗1和清洗2的代码差不多，但是清洗1里引用元素位置，是以循环的次数为准###即，当第一次循环时，就引用第1个元素，第二次引用第二个，以此类推
+###清洗2则不然，她是以变量里的数值为准
+###即，当第一次循环的时候，如果变量s里的第o位元素是5，就会引用变量z里第5个元素
+###解释1:变量f与z，在python里称为字典，可以理解为有多个数值的变量，它们通过f[?],中括号里的问号来定位，排序从0开始，
+###即0=我们理解的位置1 ，其中f是获取结果，z是手动写入，具体的表现形式，参考z即可
+###把整理好的数据，通过logstash模块，把变量a里的信息向103.25.8.3:1520 发送
+host = '103.25.8.3'
+
+test_logger = logging.getLogger('python-logstash-logger')
+test_logger.setLevel(logging.DEBUG)
+test_logger.addHandler(logstash.TCPLogstashHandler(host, 1520, version=1))    ###host后面的就是端口
+
+test_logger.error(a)
+test_logger.info('python-logstash: test logstash info message.')
+test_logger.warning('python-logstash: test logstash warning message.')
