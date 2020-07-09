@@ -121,7 +121,7 @@ g1 = int(g)                                                     ###变量g以int
 for p in range(0,g1):
     pattern2 = re.compile(r'alias":"(.+?)"')                    ###使用re模块提取数据，括号里定义提取格式，写入变量pattern2
     l = pattern2.findall(aa)                                    ###使用pattern变量来提取变量aa里的数据，并写入变量L
-    n = int(l[p])                                               ###忘记有什么用了
+    n = int(f[p])                                               ###忘记有什么用了
     m = 'userid":"'+f[p]                                        ###定义变量m为userid+变量f里的第p个元素
     o = 'userid:'+l[n]                                          ###定义变量o为userid+变量L里的第n个元素
     a = re.sub(m,o,a)                                           ###替换变量a里与变量m相同的元素为变量o，并重新写入变量a
