@@ -1,0 +1,94 @@
+import json
+import requests
+import re
+import time
+import datetime
+import logging
+import logstash
+import sys
+
+####获取最近5分钟的操作信息
+url = 'http://127.0.0.1:8080/api_jsonrpc.php'
+post_headers = {'Content-Type': 'application/json'}
+post_data = {
+    "jsonrpc" : "2.0",
+    "method" : "auditlog.get",                                                    ###定义获取操作信息
+    "params" : {
+        "output" : ["auditid","clock","userid","ip","action","note"],             ###定义显示的字段
+        "limit":2
+    },
+    "id" : 1,
+    "auth":"0360a126b439e8a9b0a3cc0c9a196897"                                                                   ####使用加密令牌登陆zabbix
+}
+ret = requests.post(url, data = json.dumps(post_data), headers = post_headers)        ###开始获取
+a = ret.text     ###把获取的结果以text格式写入变量a
+
+
+###获取用户信息，用于后期修改
+url = 'http://127.0.0.1:8080/api_jsonrpc.php'
+post_headers = {'Content-Type': 'application/json'}
+post_data = {
+    "jsonrpc" : "2.0",
+    "method" : "user.get",                                                         ###定义获取用户信息
+    "params" : {
+        "output" : ["alias"]                                                                                                    ###默认会带上userid并以该字段作为排序，alias是用户名字段
+    },
+    "id" : 1,
+    "auth":"0360a126b439e8a9b0a3cc0c9a196897"
+}
+user = requests.post(url, data = json.dumps(post_data), headers = post_headers)
+aa = user.text                              ###把获取的结果以text格式写入变量aa
+
+def countX(lst, x):                         ###启用def函数，并引入变量lst和x              
+    return lst.count(x)                     ###统计变量x里的元素个数              
+lst = a                                     ###定义变量lst/把变量a的结果写入变量lst             
+x = 'clock'                                 ###定义变量x            
+i = int(countX(lst, x))                     ###把统计结果以int格式写入变量i             
+
+patt = re.compile(r'userid":"(.+?)"')       ####使用re模块提取数据，括号里定义提取格式，写入变量pattern                          
+e = patt.findall(a)                         ####使用patt变量来提取变量a里的数据，并写入变量b，或者说提取数据制作字典e
+
+patt1 = re.compile(r'action":"(.+?)"')
+r = patt1.findall(a)
+
+z = ['action:Add','action:Update','action:Delete','action:Login','action:Logout','action:Enable','action:Disable']
+###字典z
+for q in range(0,i):                           
+###整理时间
+    pattern = re.compile(r'clock":"(.+?)"')                     ###使用re模块提取数据，括号里定义提取格式，写入变量pattern
+    b = pattern.findall(a)                                      ###使用pattern变量来提取变量a里的数据，并写入变量b
+    c = b[q]                                                    ###把变量b里的第q元素写入变量c
+    d = int(c)                                                  ###把变量c作为int格式写入变量d
+    timestamp = d                                               ###把变量d写入timestamp
+    time_local = time.localtime(timestamp)                      ###使用time模块重新读取timestamp变量里的数值,并写入time_local
+    bt = time.strftime("%Y-%m-%d %H:%M:%S",time_local)          ###重新定义time_local里的时间显示模式，并写入变量bt
+    a = re.sub(c,bt,a)                                          ###使用re模块把变量a里与变量c相同的字符替换为变量bt
+###整理用户名
+    pattern2 = re.compile(r'alias":"(.+?)"')                    
+    l = pattern2.findall(aa)                                    
+    n = int(e[q])                                               ###字典e第q个元素，以int格式写入变量n
+    n1 = n - 1                                                  ###这里是userid与python排序有区别才写的
+    m = 'userid":"'+e[q]                                        
+    o = 'userid:'+l[n1]                                         
+    a = re.sub(m,o,a,1) 
+###整理动作
+    z1 = int(r[q])                                                                                                    
+    u = 'action":"'+r[q]                                         
+    v = z[z1]                                                    
+    a = re.sub(u,v,a,1)
+###sub(pattern,repl,string,count=0,flag=0)
+###pattern = 关键字
+###repl    = 替换后的字符
+###string  = 匹配的内容（官方），修改文件或者内容≈sed -i 's/x/x/' x   最后的x
+###count   = 用来限制替换个数，默认或者不填为0，即全部替换
+###flags   = 匹配模式，具体作用不明
+###例： re.sub('test','1@','test and text test',1)
+host = '103.25.8.3'
+
+test_logger = logging.getLogger('python-logstash-logger')
+test_logger.setLevel(logging.DEBUG)
+test_logger.addHandler(logstash.TCPLogstashHandler(host, 1520, version=1))    ###host后面的就是端口
+
+test_logger.error(a)
+test_logger.info('python-logstash: test logstash info message.')
+test_logger.warning('python-logstash: test logstash warning message.')
