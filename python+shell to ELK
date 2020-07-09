@@ -14,11 +14,11 @@ shell部分
 #!/bin/sh
 a=`date +%s`                             ###获取当前的系统时间戳
 let "b=$a - 300"                         ###获取5分钟前的时间戳
-cp /root/k.py /root/k1.py             ###把模板文件复制一份 
-sed -i "s/@1@a@/$a/" k1.py        ###替换新复制的文件里的内容
+cp /root/k.py /root/k1.py                ###把模板文件复制一份 
+sed -i "s/@1@a@/$a/" k1.py               ###替换新复制的文件里的内容
 sed -i "s/@2@b@/$b/" k1.py
-python3 /root/k1.py                    ###运行新文件
-rm -rf k1.py                               ###删除新文件
+python3 /root/k1.py                      ###运行新文件
+rm -rf k1.py                             ###删除新文件
 
 
 
@@ -56,9 +56,9 @@ post_data = {
         "time_till" : "@2@b@"                                                     ###定义获取数据的结束时间
     },
     "id" : 1,
-    "auth":"0360a126b439e8a9b0a3cc0c9a196897"                                                                   ####使用加密令牌登陆zabbix
+    "auth":"0360a126b439e8a9b0a3cc0c9a196897"                                     ####使用加密令牌登陆zabbix
 }
-ret = requests.post(url, data = json.dumps(post_data), headers = post_headers)        ###开始获取
+ret = requests.post(url, data = json.dumps(post_data), headers = post_headers)    ###开始获取
 a = ret.text     ###把获取的结果以text格式写入变量a
 
 
@@ -69,7 +69,7 @@ post_data = {
     "jsonrpc" : "2.0",
     "method" : "user.get",                                                         ###定义获取用户信息
     "params" : {
-        "output" : ["alias"]                                                                                                    ###默认会带上userid并以该字段作为排序，alias是用户名字段
+        "output" : ["alias"]                                                       ###默认会带上userid并以该字段作为排序，alias是用户名字段
     },
     "id" : 1,
     "auth":"0360a126b439e8a9b0a3cc0c9a196897"
@@ -86,7 +86,7 @@ i = int(countX(lst, x))        ###把统计结果以int格式写入变量i
 
 ###开始循环
 for q in range(0,i):                           ###使用for循环，并定义从0开始，最大值为变量i
-    pattern = re.compile(r'clock":"(.+?)"')                                      ###使用re模块提取数据，括号里定义提取格式，写入变量pattern
+    pattern = re.compile(r'clock":"(.+?)"')                     ###使用re模块提取数据，括号里定义提取格式，写入变量pattern
     b = pattern.findall(a)                                      ###使用pattern变量来提取变量a里的数据，并写入变量b
     c = b[q]                                                    ###把变量b里的第一元素写入变量c
     d = int(c)                                                  ###把变量c作为int格式写入变量d
