@@ -1,3 +1,15 @@
+新机器，或者没有安装过python3的centos机器需要运行以下命令才可以正常使用
+yum -y install python3
+yum -y install python3-pip
+pip3 install json
+pip3 install requests
+pip3 install python-logstash
+pip3 install isort
+pip3 install logstash
+pip3 install goslate
+pip3 install datetime
+
+
 shell部分
 #!/bin/sh
 a=`date +%s`                             ###获取当前的系统时间戳
