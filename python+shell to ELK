@@ -1,3 +1,6 @@
+curl -i -X POST -H 'Content-Type: application/json' -d '{"jsonrpc": "2.0", "method":"user.login", "params":{"user":"Admin", "password":"abbix"}, "auth":null,"id":0}'  http://127.0.0.1:8080/api_jsonrpc.php
+获取zabbix的令牌密匙
+
 新机器，或者没有安装过python3的centos机器需要运行以下命令才可以正常使用
 yum -y install python3
 yum -y install python3-pip
